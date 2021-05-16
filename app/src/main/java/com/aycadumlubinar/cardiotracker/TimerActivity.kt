@@ -106,7 +106,133 @@ class TimerActivity : AppCompatActivity() {
         timeTV.text = resources.getString(R.string.ini_time)
         startTimer(6)
     }
+    private fun iniWorkout() {
+        currentStep = 1
+        constraintLayout.setBackgroundResource(R.drawable.blue_gradient)
+        stepCountTV.text =
+                resources.getString(R.string.upper_set) + " " + currentSetNumber.toString()
+        stepTV.text = resources.getString(R.string.upper_work_it)
+        timeTV.text = "${String.format(
+                FORMAT,
+                convertSecondsToMinutes(workSecondsIni).first
+        )}:${String.format(FORMAT, convertSecondsToMinutes(workSecondsIni).second + 1)}"
+        startTimer(workSecondsIni + 1)
+    }
 
+    private fun iniRest() {
+        currentStep = 2
+        constraintLayout.setBackgroundResource(R.drawable.pink_gradient)
+        stepTV.text = resources.getString(R.string.upper_rest_now)
+        timeTV.text = "${String.format(
+                FORMAT,
+                convertSecondsToMinutes(restSecondsIni).first
+        )}:${String.format(FORMAT, convertSecondsToMinutes(restSecondsIni).second + 1)}"
+        startTimer(restSecondsIni + 1)
+        currentSetNumber -= 1
+    }
+
+    private fun iniDone() {
+        currentStep = -1
+        stepTV.isVisible = false
+        stepCountTV.isVisible = false
+        timeTV.text = resources.getString(R.string.upper_done)
+        playPauseB.setImageResource(R.drawable.ic_baseline_play_arrow_24)
+    }
+
+    private fun getValues() {
+        setNumberIni = intent.getIntExtra(INTENT_SET_NUMBER, 0)
+        currentSetNumber = setNumberIni
+        workSecondsIni = intent.getIntExtra(INTENT_WORK_INTERVAL, 0)
+        restSecondsIni = intent.getIntExtra(INTENT_REST_INTERVAL, 0)
+    }
+
+    private fun decreaseTV(textViewTime: TextView) {
+        var currentTime = textViewTime.text.toString()
+        var seconds = getTimeFromStr(currentTime).second
+        var minutes = getTimeFromStr(currentTime).first
+        if (minutes != 0) {
+            if (seconds == 0) {
+                seconds = 59
+                minutes -= 1
+            } else {
+                seconds -= 1
+            }
+        } else {
+            if (seconds in 1..4) {
+                seconds -= 1
+                if (seconds == 0) {
+                    if (!isMuted) {
+                        mpStart.start()
+                    }
+                    seconds = 0
+                    minutes = 0
+                } else {
+                    if (!isMuted) {
+                        mpGetReady.start()
+                    }
+                }
+            } else {
+                seconds -= 1
+            }
+        }
+        currentTime = String.format(FORMAT, minutes) + ":" + String.format(FORMAT, seconds)
+        textViewTime.text = currentTime
+    }
+
+    private fun startTimer(sec: Int) {
+        timer = object : CountDownTimer((sec * 1000).toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                decreaseTV(timeTV)
+            }
+
+            override fun onFinish() {
+                if (currentSetNumber != 0) {
+                    if (currentStep == 0 || currentStep == 2) {
+                        iniWorkout()
+                    } else if (currentStep == 1) {
+                        iniRest()
+                    } else {
+                        finish()
+                    }
+                } else {
+                    iniDone()
+                }
+            }
+        }
+        (timer as CountDownTimer).start()
+    }
+
+    private fun cancelTimer() {
+        timer?.cancel()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cancelTimer()
+    }
+
+    private fun hideSystemUI() {
+
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE
+
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_FULLSCREEN)
+    }
+
+    private fun showSystemUI() {
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideSystemUI()
+    }
 
 }
 
